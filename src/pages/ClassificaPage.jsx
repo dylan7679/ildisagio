@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Classifica from '../components/Classifica'
 import ClassificaPersonale from '../components/ClassificaPersonale'
+import ClassificaUtenti from '../components/ClassificaUtenti'
 import { useAuth } from '../context/AuthContext'
 
 const CATEGORIE = [
@@ -36,6 +37,9 @@ export default function ClassificaPage() {
         </TabBtn>
         <TabBtn active={tab === 'categoria'} onClick={() => setTab('categoria')} icon="category">
           Categorie
+        </TabBtn>
+        <TabBtn active={tab === 'utenti'} onClick={() => setTab('utenti')} icon="emoji_events">
+          Utenti
         </TabBtn>
         {user ? (
           <TabBtn active={tab === 'personale'} onClick={() => setTab('personale')} icon="person">
@@ -88,6 +92,8 @@ export default function ClassificaPage() {
           <Classifica limit={20} categoria={categoriaTab} />
         </>
       )}
+
+      {tab === 'utenti' && <ClassificaUtenti />}
 
       {tab === 'personale' && <ClassificaPersonale />}
     </div>
