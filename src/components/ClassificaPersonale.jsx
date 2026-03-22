@@ -47,10 +47,11 @@ export default function ClassificaPersonale() {
           .select('id, testo, categoria, punteggio_elo')
           .in('id', topIds)
 
-        // Ordina per frequenza di voto
+        // Ordina per punteggio ELO decrescente
         const ordinati = topIds
           .map(id => disagi?.find(d => d.id === id))
           .filter(Boolean)
+          .sort((a, b) => b.punteggio_elo - a.punteggio_elo)
 
         setTopVotati(ordinati)
       }
@@ -76,7 +77,7 @@ export default function ClassificaPersonale() {
   return (
     <div className="flex flex-col gap-5">
       {/* Stats personali */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="bg-[#ffffff] border-[3px] border-[#2c2f30] rounded-xl p-4 ink-shadow text-center">
           <p className="font-headline font-extrabold text-2xl text-[#2c2f30]">
             {stats?.totaleVoti?.toLocaleString('it-IT') || 0}
@@ -84,10 +85,29 @@ export default function ClassificaPersonale() {
           <p className="text-[#595c5d] text-xs font-bold uppercase tracking-wide mt-1">Voti dati</p>
         </div>
         <div className="bg-[#fdd400] border-[3px] border-[#2c2f30] rounded-xl p-4 ink-shadow text-center">
-          <p className="font-headline font-extrabold text-2xl text-[#594a00]">
+          <p className="font-headline font-extrabold text-xl text-[#594a00] truncate">
             {profile?.nickname || user?.email?.split('@')[0] || '—'}
           </p>
-          <p className="text-[#594a00] text-xs font-bold uppercase tracking-wide mt-1">Il tuo nickname</p>
+          <p className="text-[#594a00] text-xs font-bold uppercase tracking-wide mt-1">Nickname</p>
+        </div>
+        <div
+          className={`border-[3px] border-[#2c2f30] rounded-xl p-4 ink-shadow text-center transition-colors ${
+            (profile?.streak_corrente ?? 0) >= 3 ? 'bg-[#ff9475]' : 'bg-[#ffffff]'
+          }`}
+        >
+          <p className={`font-headline font-extrabold text-2xl ${
+            (profile?.streak_corrente ?? 0) >= 3 ? 'text-[#601500]' : 'text-[#2c2f30]'
+          }`}>
+            {(profile?.streak_corrente ?? 0) >= 3
+              ? `🔥 ${profile.streak_corrente}`
+              : (profile?.streak_corrente ?? 0)
+            }
+          </p>
+          <p className={`text-xs font-bold uppercase tracking-wide mt-1 ${
+            (profile?.streak_corrente ?? 0) >= 3 ? 'text-[#601500]' : 'text-[#595c5d]'
+          }`}>
+            Streak
+          </p>
         </div>
       </div>
 

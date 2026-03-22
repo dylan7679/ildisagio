@@ -3,12 +3,15 @@ import { HelmetProvider } from 'react-helmet-async'
 import { Suspense, lazy } from 'react'
 import Layout from './components/Layout'
 import { AuthProvider } from './context/AuthContext'
+import CookieBanner from './components/CookieBanner'
+import OnboardingOverlay from './components/OnboardingOverlay'
 
 const Home = lazy(() => import('./pages/Home'))
 const ClassificaPage = lazy(() => import('./pages/ClassificaPage'))
 const SubmitPage = lazy(() => import('./pages/SubmitPage'))
 const DisagioPage = lazy(() => import('./pages/DisagioPage'))
 const Admin = lazy(() => import('./pages/Admin'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
 function PageLoader() {
   return (
@@ -42,8 +45,13 @@ export default function App() {
               <Route path="disagio/:id" element={
                 <Suspense fallback={<PageLoader />}><DisagioPage /></Suspense>
               } />
+              <Route path="privacy" element={
+                <Suspense fallback={<PageLoader />}><PrivacyPage /></Suspense>
+              } />
             </Route>
           </Routes>
+          <CookieBanner />
+          <OnboardingOverlay />
         </BrowserRouter>
       </AuthProvider>
     </HelmetProvider>

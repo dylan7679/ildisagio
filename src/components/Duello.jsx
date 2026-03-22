@@ -1,12 +1,16 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getFingerprint } from '../lib/fingerprint'
+import { useAuth } from '../context/AuthContext'
 
 export default function Duello({ matchData, onVoted }) {
   const [voting, setVoting] = useState(null)
   const [voted, setVoted] = useState(null)
   const [eloDelta, setEloDelta] = useState(null)
+  const [streakMsg, setStreakMsg] = useState(null)
   const [error, setError] = useState(null)
+  const [rateLimited, setRateLimited] = useState(false)
+  const { user, profile, loadProfile } = useAuth()
 
   const handleVote = useCallback(async (vincitore, perdente) => {
     if (voting || voted) return
@@ -19,11 +23,18 @@ export default function Duello({ matchData, onVoted }) {
         p_vincitore: vincitore.id,
         p_perdente: perdente.id,
         p_fingerprint: fingerprint,
+        p_user_id: user?.id ?? null,
       })
 
       if (rpcError) {
         if (rpcError.code === '23505') {
           setTimeout(() => { setVoting(null); onVoted?.() }, 400)
+          return
+        }
+        if (rpcError.message?.includes('rate_limited') || rpcError.code === 'P0001') {
+          setRateLimited(true)
+          setVoting(null)
+          setTimeout(() => setRateLimited(false), 10000)
           return
         }
         throw rpcError
@@ -33,17 +44,34 @@ export default function Duello({ matchData, onVoted }) {
       setVoting(null)
       if (data) setEloDelta(data.vincitore_elo - vincitore.punteggio_elo)
 
+      // Aggiorna streak e ricarica profilo
+      if (user?.id) {
+        // aggiorna_streak è idempotente: gestisce anche il caso già chiamato oggi
+        supabase.rpc('aggiorna_streak', { p_user_id: user.id })
+
+        const { data: newProfile } = await supabase
+          .from('user_profiles')
+          .select('streak_corrente')
+          .eq('id', user.id)
+          .single()
+        if (newProfile?.streak_corrente > 1) {
+          setStreakMsg(`🔥 ${newProfile.streak_corrente} giorni di fila!`)
+        }
+        loadProfile(user.id)
+      }
+
       setTimeout(() => {
         setVoted(null)
         setEloDelta(null)
+        setStreakMsg(null)
         onVoted?.()
-      }, 1300)
+      }, 1500)
     } catch (err) {
       console.error('Errore voto:', err)
       setError('Ops, riprova.')
       setVoting(null)
     }
-  }, [voting, voted, onVoted])
+  }, [voting, voted, onVoted, user, loadProfile])
 
   if (!matchData) {
     return (
@@ -105,13 +133,27 @@ export default function Duello({ matchData, onVoted }) {
         tiltDeg={2}
       />
 
-      {error && (
+      {rateLimited && (
+        <div className="mt-2 rounded-xl border-[3px] border-[#ab2d00] bg-[#fce8e4] px-4 py-3 text-center">
+          <p className="text-[#ab2d00] text-sm font-bold">
+            Stai votando troppo velocemente! Aspetta un momento.
+          </p>
+        </div>
+      )}
+
+      {error && !rateLimited && (
         <p className="text-center text-[#ab2d00] text-sm font-bold mt-2">{error}</p>
       )}
 
-      <p className="text-center text-[#757778] text-xs font-semibold mt-1">
-        tocca il disagio che ti fa piu' senso di vergogna
-      </p>
+      {streakMsg ? (
+        <p className="text-center text-[#ab2d00] text-sm font-extrabold font-headline mt-1 animate-bounce-in">
+          {streakMsg}
+        </p>
+      ) : (
+        <p className="text-center text-[#757778] text-xs font-semibold mt-1">
+          tocca il disagio che ti fa piu' senso di vergogna
+        </p>
+      )}
     </div>
   )
 }
@@ -182,9 +224,6 @@ function DisagioCard({ disagio, opponent, onVote, isWinner, isLoser, isVoting, d
             )}
             {isWinner && (
               <span className="text-2xl animate-bounce">🔥</span>
-            )}
-            {!isWinner && !isLoser && (
-              <span className="font-headline text-[#757778] text-base font-bold">{disagio.punteggio_elo}</span>
             )}
           </div>
         </div>

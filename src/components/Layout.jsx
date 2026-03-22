@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import MiniClassifica from './MiniClassifica'
 import AuthModal from './AuthModal'
+import FeedbackButton from './FeedbackButton'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
@@ -76,8 +77,13 @@ export default function Layout() {
                 <p className="font-headline font-bold text-xs text-[#2c2f30] truncate">
                   {profile?.nickname || user.email?.split('@')[0]}
                 </p>
+                {profile?.streak_corrente > 1 && (
+                  <p className="text-xs font-bold text-[#ab2d00] mt-0.5">
+                    🔥 {profile.streak_corrente} giorni di fila
+                  </p>
+                )}
                 {isAdmin && (
-                  <Link to="/admin" className="text-[#ab2d00] text-xs font-bold hover:underline">
+                  <Link to="/admin" className="text-[#ab2d00] text-xs font-bold hover:underline block mt-1">
                     Pannello Admin
                   </Link>
                 )}
@@ -102,6 +108,9 @@ export default function Layout() {
           <p className="text-center text-[#595c5d] text-xs font-semibold italic">
             siamo tutti ugualmente imbarazzanti
           </p>
+          <Link to="/privacy" className="text-center text-[#757778] text-xs font-semibold hover:text-[#2c2f30] transition-colors">
+            Privacy Policy
+          </Link>
         </div>
       </aside>
 
@@ -135,14 +144,21 @@ export default function Layout() {
       </header>
 
       {/* Content area */}
-      <div className="flex-1 flex min-w-0">
-        <main className="flex-1 min-w-0 max-w-2xl lg:max-w-none mx-auto w-full px-4 py-5 pb-24 lg:pb-10 lg:py-8 lg:px-8">
+      <div className="flex-1 flex min-w-0 justify-center xl:justify-start">
+        <main className="w-full min-w-0 max-w-2xl lg:max-w-3xl xl:max-w-none xl:flex-1 px-4 py-5 pb-24 lg:pb-10 lg:py-8 lg:px-8">
           <Outlet />
         </main>
         <aside className="hidden xl:block w-72 py-8 pr-6 shrink-0">
           <MiniClassifica />
         </aside>
       </div>
+
+      {/* Mobile Footer */}
+      <footer className="lg:hidden text-center pb-20 pt-2">
+        <Link to="/privacy" className="text-[#757778] text-xs font-semibold hover:text-[#2c2f30] transition-colors">
+          Privacy Policy
+        </Link>
+      </footer>
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-[4px] border-[#2c2f30] rounded-t-3xl z-50">
@@ -169,6 +185,7 @@ export default function Layout() {
         </div>
       </nav>
 
+      <FeedbackButton />
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   )

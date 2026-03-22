@@ -61,20 +61,22 @@ export default function Admin() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Tabs */}
-        <div className="flex gap-2 bg-[#e6e8ea] border-[3px] border-[#2c2f30] rounded-xl p-1 ink-shadow-sm mb-6">
+        <div className="flex gap-1 bg-[#e6e8ea] border-[3px] border-[#2c2f30] rounded-xl p-1 ink-shadow-sm mb-6 flex-wrap">
           {[
             { id: 'submissions', label: 'Submission', icon: 'pending_actions' },
-            { id: 'disagi', label: 'Tutti i disagi', icon: 'list' },
+            { id: 'disagi', label: 'Disagi', icon: 'list' },
             { id: 'utenti', label: 'Utenti', icon: 'group' },
+            { id: 'segnalazioni', label: 'Segnalazioni', icon: 'flag' },
+            { id: 'feedback', label: 'Feedback', icon: 'feedback' },
           ].map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-headline font-extrabold uppercase transition-all
+              className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-headline font-extrabold uppercase transition-all min-w-[80px]
                 ${tab === t.id ? 'bg-[#fdd400] text-[#594a00] border-[2px] border-[#2c2f30] ink-shadow-sm' : 'text-[#595c5d] hover:bg-[#dadddf]'}`}
             >
               <span className="material-symbols-outlined text-sm">{t.icon}</span>
-              {t.label}
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
@@ -82,6 +84,8 @@ export default function Admin() {
         {tab === 'submissions' && <SubmissionsPanel />}
         {tab === 'disagi' && <DisagiPanel />}
         {tab === 'utenti' && <UtentiPanel />}
+        {tab === 'segnalazioni' && <SegnalazioniPanel />}
+        {tab === 'feedback' && <FeedbackPanel />}
       </div>
     </div>
   )
@@ -365,6 +369,156 @@ function UtentiPanel() {
               {u.is_admin ? 'Rimuovi admin' : 'Rendi admin'}
             </button>
           </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ── Segnalazioni ── */
+function SegnalazioniPanel() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('segnalazioni')
+      .select('id, motivo, created_at, disagio_id, user_id, disagi(testo, categoria), user_profiles(email, nickname)')
+      .order('created_at', { ascending: false })
+    setItems(data || [])
+    setLoading(false)
+  }
+
+  async function elimina(id) {
+    await supabase.from('segnalazioni').delete().eq('id', id)
+    setItems(s => s.filter(x => x.id !== id))
+  }
+
+  if (loading) return <Loader />
+
+  if (items.length === 0) return (
+    <div className="text-center py-16 bg-white border-[3px] border-[#2c2f30] rounded-2xl ink-shadow">
+      <span className="text-4xl block mb-3">🏳️</span>
+      <p className="font-headline font-extrabold text-[#2c2f30]">Nessuna segnalazione.</p>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm font-bold text-[#595c5d]">{items.length} segnalazioni totali</p>
+      {items.map(s => (
+        <div key={s.id} className="bg-white border-[3px] border-[#2c2f30] rounded-2xl p-4 ink-shadow flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-[#ab2d00] uppercase mb-1">Disagio segnalato</p>
+              <p className="text-sm font-bold text-[#2c2f30] line-clamp-2">
+                {s.disagi?.testo || s.disagio_id}
+              </p>
+              <span className="text-xs text-[#595c5d] capitalize bg-[#eff1f2] border border-[#e0e3e4] px-2 py-0.5 rounded-full font-semibold inline-block mt-1">
+                {s.disagi?.categoria}
+              </span>
+            </div>
+            <button
+              onClick={() => elimina(s.id)}
+              className="text-xs text-[#757778] hover:text-[#ab2d00] font-bold shrink-0"
+            >
+              Archivia
+            </button>
+          </div>
+          {s.motivo && (
+            <p className="text-xs text-[#595c5d] bg-[#eff1f2] rounded-lg p-2 italic">"{s.motivo}"</p>
+          )}
+          <p className="text-xs text-[#757778]">
+            Segnalato da {s.user_profiles?.nickname || s.user_profiles?.email || 'utente'} · {new Date(s.created_at).toLocaleDateString('it-IT')}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ── Feedback ── */
+function FeedbackPanel() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('tutti')
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('feedback')
+      .select('*')
+      .order('created_at', { ascending: false })
+    setItems(data || [])
+    setLoading(false)
+  }
+
+  async function segnaLetto(id) {
+    await supabase.from('feedback').update({ letto: true }).eq('id', id)
+    setItems(s => s.map(x => x.id === id ? { ...x, letto: true } : x))
+  }
+
+  const tipoIcon = { bug: '🐛', suggerimento: '💡', altro: '💬' }
+  const filtered = filter === 'tutti' ? items : items.filter(x => x.tipo === filter)
+  const nonLetti = items.filter(x => !x.letto).length
+
+  if (loading) return <Loader />
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-[#595c5d]">
+          {items.length} feedback · {nonLetti} non letti
+        </p>
+        <div className="flex gap-1">
+          {['tutti', 'bug', 'suggerimento', 'altro'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`capitalize px-2 py-1 rounded-lg text-xs font-bold border-[2px] transition-all
+                ${filter === f ? 'bg-[#2c2f30] text-white border-[#2c2f30]' : 'bg-white text-[#595c5d] border-[#e0e3e4]'}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-16 bg-white border-[3px] border-[#2c2f30] rounded-2xl ink-shadow">
+          <span className="text-4xl block mb-3">💬</span>
+          <p className="font-headline font-extrabold text-[#2c2f30]">Nessun feedback.</p>
+        </div>
+      ) : filtered.map(f => (
+        <div key={f.id} className={`bg-white border-[3px] rounded-2xl p-4 ink-shadow flex flex-col gap-2 ${f.letto ? 'border-[#e0e3e4] opacity-70' : 'border-[#2c2f30]'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{tipoIcon[f.tipo]}</span>
+              <span className="capitalize text-xs font-extrabold text-[#595c5d] font-headline">{f.tipo}</span>
+              {!f.letto && (
+                <span className="bg-[#ab2d00] text-white text-xs rounded-full px-2 py-0.5 font-bold">Nuovo</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#757778]">{new Date(f.created_at).toLocaleDateString('it-IT')}</span>
+              {!f.letto && (
+                <button onClick={() => segnaLetto(f.id)} className="text-xs text-[#0058ba] font-bold hover:underline">
+                  Segna letto
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="text-sm text-[#2c2f30] font-medium">{f.testo}</p>
+          {f.email && (
+            <p className="text-xs text-[#595c5d]">
+              📧 <a href={`mailto:${f.email}`} className="hover:underline text-[#0058ba]">{f.email}</a>
+            </p>
+          )}
         </div>
       ))}
     </div>

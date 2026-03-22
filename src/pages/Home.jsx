@@ -55,7 +55,7 @@ export default function Home() {
   const handleVoted = useCallback(() => { loadMatch() }, [])
 
   return (
-    <div className="flex flex-col gap-6 max-w-xl lg:max-w-2xl mx-auto lg:mx-0">
+    <div className="flex flex-col gap-6 max-w-xl lg:max-w-2xl mx-auto">
       <DisagioDelGiorno />
 
       {loadingMatch ? (
